@@ -85,6 +85,18 @@ export type AgentConfig = {
     allowAgents?: string[];
     /** Per-agent default model for spawned sub-agents (string or {primary,fallbacks}). */
     model?: AgentModelConfig;
+    /**
+     * Cost-optimized model tiers for spawned sub-agents.
+     * Mirrors `agents.defaults.subagents.models`; per-agent override takes priority.
+     */
+    models?: {
+      /** Model for simple/cheap sub-tasks (e.g. classification, lookup). */
+      simple?: AgentModelConfig;
+      /** Model for moderate sub-tasks (e.g. summarisation, drafting). */
+      medium?: AgentModelConfig;
+      /** Model for complex sub-tasks requiring deep reasoning. */
+      complex?: AgentModelConfig;
+    };
   };
   /** Optional per-agent sandbox overrides. */
   sandbox?: AgentSandboxConfig;

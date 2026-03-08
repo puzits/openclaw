@@ -66,6 +66,7 @@ async function expectSpawnUsesConfiguredModel(params: {
   runId: string;
   callId: string;
   expectedModel: string;
+  complexity?: "simple" | "medium" | "complex";
 }) {
   if (params.config) {
     setSessionsSpawnConfigOverride(params.config);
@@ -82,6 +83,7 @@ async function expectSpawnUsesConfiguredModel(params: {
 
   const result = await tool.execute(params.callId, {
     task: "do thing",
+    ...(params.complexity ? { complexity: params.complexity } : {}),
   });
   expect(result.details).toMatchObject({
     status: "accepted",
@@ -302,5 +304,168 @@ describe("openclaw-tools: subagents (sessions_spawn model + thinking)", () => {
       runId: "run-1",
     });
     expect(spawnedTimeout).toBe(2);
+  });
+
+  it("sessions_spawn uses simple-tier model when complexity=simple is set", async () => {
+    await expectSpawnUsesConfiguredModel({
+      config: {
+        session: { mainKey: "main", scope: "per-sender" },
+        agents: {
+          defaults: {
+            subagents: {
+              models: {
+                simple: "anthropic/claude-haiku-3-5",
+                medium: "anthropic/claude-sonnet-4-5",
+                complex: "anthropic/claude-opus-4-6",
+              },
+            },
+          },
+        },
+      },
+      runId: "run-complexity-simple",
+      callId: "call-complexity-simple",
+      expectedModel: "anthropic/claude-haiku-3-5",
+      complexity: "simple",
+    });
+  });
+
+  it("sessions_spawn uses medium-tier model when complexity=medium is set", async () => {
+    await expectSpawnUsesConfiguredModel({
+      config: {
+        session: { mainKey: "main", scope: "per-sender" },
+        agents: {
+          defaults: {
+            subagents: {
+              models: {
+                simple: "anthropic/claude-haiku-3-5",
+                medium: "anthropic/claude-sonnet-4-5",
+                complex: "anthropic/claude-opus-4-6",
+              },
+            },
+          },
+        },
+      },
+      runId: "run-complexity-medium",
+      callId: "call-complexity-medium",
+      expectedModel: "anthropic/claude-sonnet-4-5",
+      complexity: "medium",
+    });
+  });
+
+  it("sessions_spawn uses complex-tier model when complexity=complex is set", async () => {
+    await expectSpawnUsesConfiguredModel({
+      config: {
+        session: { mainKey: "main", scope: "per-sender" },
+        agents: {
+          defaults: {
+            subagents: {
+              models: {
+                simple: "anthropic/claude-haiku-3-5",
+                medium: "anthropic/claude-sonnet-4-5",
+                complex: "anthropic/claude-opus-4-6",
+              },
+            },
+          },
+        },
+      },
+      runId: "run-complexity-complex",
+      callId: "call-complexity-complex",
+      expectedModel: "anthropic/claude-opus-4-6",
+      complexity: "complex",
+    });
+  });
+
+  it("sessions_spawn explicit model overrides complexity hint", async () => {
+    const calls: GatewayCall[] = [];
+    mockPatchAndSingleAgentRun({ calls, runId: "run-explicit-override" });
+    setSessionsSpawnConfigOverride({
+      session: { mainKey: "main", scope: "per-sender" },
+      agents: {
+        defaults: {
+          subagents: {
+            models: {
+              simple: "anthropic/claude-haiku-3-5",
+              complex: "anthropic/claude-opus-4-6",
+            },
+          },
+        },
+      },
+    });
+
+    const tool = await getSessionsSpawnTool({
+      agentSessionKey: "agent:research:main",
+      agentChannel: "discord",
+    });
+
+    const result = await tool.execute("call-explicit-override", {
+      task: "do thing",
+      model: "openai/gpt-5.4",
+      complexity: "simple",
+    });
+    expect(result.details).toMatchObject({
+      status: "accepted",
+      modelApplied: true,
+    });
+
+    const patchCall = calls.find(
+      (call) => call.method === "sessions.patch" && (call.params as { model?: string })?.model,
+    );
+    // explicit model wins over the simple-tier model
+    expect(patchCall?.params).toMatchObject({ model: "openai/gpt-5.4" });
+  });
+
+  it("sessions_spawn per-agent complexity model overrides defaults complexity model", async () => {
+    const calls: GatewayCall[] = [];
+    mockPatchAndSingleAgentRun({ calls, runId: "run-per-agent-complexity" });
+    setSessionsSpawnConfigOverride({
+      session: { mainKey: "main", scope: "per-sender" },
+      agents: {
+        defaults: {
+          subagents: {
+            models: { medium: "anthropic/claude-sonnet-4-5" },
+          },
+        },
+        list: [
+          {
+            id: "research",
+            subagents: {
+              models: { medium: "opencode/claude" },
+            },
+          },
+        ],
+      },
+    });
+
+    const tool = await getSessionsSpawnTool({
+      agentSessionKey: "agent:research:main",
+      agentChannel: "discord",
+    });
+
+    await tool.execute("call-per-agent-complexity", { task: "do thing", complexity: "medium" });
+
+    const patchCall = calls.find(
+      (call) => call.method === "sessions.patch" && (call.params as { model?: string })?.model,
+    );
+    expect(patchCall?.params).toMatchObject({ model: "opencode/claude" });
+  });
+
+  it("sessions_spawn falls back to subagents.model when complexity tier is not configured", async () => {
+    await expectSpawnUsesConfiguredModel({
+      config: {
+        session: { mainKey: "main", scope: "per-sender" },
+        agents: {
+          defaults: {
+            subagents: {
+              model: "minimax/MiniMax-M2.5",
+              // no models.simple tier configured
+            },
+          },
+        },
+      },
+      runId: "run-complexity-fallback",
+      callId: "call-complexity-fallback",
+      expectedModel: "minimax/MiniMax-M2.5",
+      complexity: "simple",
+    });
   });
 });

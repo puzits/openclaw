@@ -284,6 +284,22 @@ export type AgentDefaultsConfig = {
     archiveAfterMinutes?: number;
     /** Default model selection for spawned sub-agents (string or {primary,fallbacks}). */
     model?: AgentModelConfig;
+    /**
+     * Cost-optimized model tiers for spawned sub-agents.
+     * When sessions_spawn is called with a `complexity` hint, the matching tier model
+     * is selected automatically, falling back to `model` then the agent default.
+     * - simple: lightweight model for quick lookups, summaries, or classification
+     * - medium: balanced model for general tasks
+     * - complex: full-capability model for reasoning-heavy or multi-step work
+     */
+    models?: {
+      /** Model for simple/cheap sub-tasks (e.g. classification, lookup). */
+      simple?: AgentModelConfig;
+      /** Model for moderate sub-tasks (e.g. summarisation, drafting). */
+      medium?: AgentModelConfig;
+      /** Model for complex sub-tasks requiring deep reasoning. */
+      complex?: AgentModelConfig;
+    };
     /** Default thinking level for spawned sub-agents (e.g. "off", "low", "medium", "high"). */
     thinking?: string;
     /** Default run timeout in seconds for spawned sub-agents (0 = no timeout). */

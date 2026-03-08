@@ -1,6 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import type { GatewayMessageChannel } from "../../utils/message-channel.js";
 import { ACP_SPAWN_MODES, ACP_SPAWN_STREAM_TARGETS, spawnAcpDirect } from "../acp-spawn.js";
+import { SUBAGENT_COMPLEXITY_LEVELS, isSubagentComplexity } from "../model-selection.js";
 import { optionalStringEnum } from "../schema/typebox.js";
 import type { SpawnedToolContext } from "../spawned-context.js";
 import { SUBAGENT_SPAWN_MODES, spawnSubagentDirect } from "../subagent-spawn.js";
@@ -26,6 +27,8 @@ const SessionsSpawnToolSchema = Type.Object({
   runtime: optionalStringEnum(SESSIONS_SPAWN_RUNTIMES),
   agentId: Type.Optional(Type.String()),
   model: Type.Optional(Type.String()),
+  /** Task complexity hint for cost-optimized model selection (overridden by explicit model). */
+  complexity: optionalStringEnum(SUBAGENT_COMPLEXITY_LEVELS),
   thinking: Type.Optional(Type.String()),
   cwd: Type.Optional(Type.String()),
   runTimeoutSeconds: Type.Optional(Type.Number({ minimum: 0 })),
@@ -92,6 +95,8 @@ export function createSessionsSpawnTool(
       const runtime = params.runtime === "acp" ? "acp" : "subagent";
       const requestedAgentId = readStringParam(params, "agentId");
       const modelOverride = readStringParam(params, "model");
+      const complexityRaw = readStringParam(params, "complexity");
+      const complexity = isSubagentComplexity(complexityRaw) ? complexityRaw : undefined;
       const thinkingOverrideRaw = readStringParam(params, "thinking");
       const cwd = readStringParam(params, "cwd");
       const mode = params.mode === "run" || params.mode === "session" ? params.mode : undefined;
@@ -164,6 +169,7 @@ export function createSessionsSpawnTool(
           label: label || undefined,
           agentId: requestedAgentId,
           model: modelOverride,
+          complexity,
           thinking: thinkingOverrideRaw,
           runTimeoutSeconds,
           thread,

@@ -14,7 +14,8 @@ import {
 import { normalizeDeliveryContext } from "../utils/delivery-context.js";
 import { resolveAgentConfig } from "./agent-scope.js";
 import { AGENT_LANE_SUBAGENT } from "./lanes.js";
-import { resolveSubagentSpawnModelSelection } from "./model-selection.js";
+import type { SubagentComplexity } from "./model-selection.js";
+import { isSubagentComplexity, resolveSubagentSpawnModelSelection } from "./model-selection.js";
 import { resolveSandboxRuntimeStatus } from "./sandbox/runtime-status.js";
 import {
   mapToolContextToSpawnedRunMetadata,
@@ -48,6 +49,8 @@ export type SpawnSubagentParams = {
   label?: string;
   agentId?: string;
   model?: string;
+  /** Task complexity hint for cost-optimized model selection (simple/medium/complex). */
+  complexity?: SubagentComplexity;
   thinking?: string;
   runTimeoutSeconds?: number;
   thread?: boolean;
@@ -253,6 +256,7 @@ export async function spawnSubagentDirect(
     };
   }
   const modelOverride = params.model;
+  const complexityHint = isSubagentComplexity(params.complexity) ? params.complexity : undefined;
   const thinkingOverrideRaw = params.thinking;
   const requestThreadBinding = params.thread === true;
   const sandboxMode = params.sandbox === "require" ? "require" : "inherit";
@@ -381,6 +385,7 @@ export async function spawnSubagentDirect(
     cfg,
     agentId: targetAgentId,
     modelOverride,
+    complexity: complexityHint,
   });
 
   const resolvedThinkingDefaultRaw =

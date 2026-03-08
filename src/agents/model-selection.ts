@@ -379,6 +379,31 @@ export function resolveDefaultModelForAgent(params: {
   });
 }
 
+export const SUBAGENT_COMPLEXITY_LEVELS = ["simple", "medium", "complex"] as const;
+export type SubagentComplexity = (typeof SUBAGENT_COMPLEXITY_LEVELS)[number];
+
+export function isSubagentComplexity(value: unknown): value is SubagentComplexity {
+  return (
+    typeof value === "string" && (SUBAGENT_COMPLEXITY_LEVELS as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Resolve a cost-tier model for the given complexity level.
+ * Checks per-agent subagents.models first, then defaults.subagents.models.
+ * Returns undefined when no tier model is configured.
+ */
+export function resolveSubagentComplexityModel(params: {
+  cfg: OpenClawConfig;
+  agentId: string;
+  complexity: SubagentComplexity;
+}): string | undefined {
+  const agentConfig = resolveAgentConfig(params.cfg, params.agentId);
+  const agentTier = agentConfig?.subagents?.models?.[params.complexity];
+  const defaultTier = params.cfg.agents?.defaults?.subagents?.models?.[params.complexity];
+  return normalizeModelSelection(agentTier) ?? normalizeModelSelection(defaultTier);
+}
+
 export function resolveSubagentConfiguredModelSelection(params: {
   cfg: OpenClawConfig;
   agentId: string;
@@ -395,6 +420,7 @@ export function resolveSubagentSpawnModelSelection(params: {
   cfg: OpenClawConfig;
   agentId: string;
   modelOverride?: unknown;
+  complexity?: SubagentComplexity;
 }): string {
   const runtimeDefault = resolveDefaultModelForAgent({
     cfg: params.cfg,
@@ -402,6 +428,13 @@ export function resolveSubagentSpawnModelSelection(params: {
   });
   return (
     normalizeModelSelection(params.modelOverride) ??
+    (params.complexity
+      ? resolveSubagentComplexityModel({
+          cfg: params.cfg,
+          agentId: params.agentId,
+          complexity: params.complexity,
+        })
+      : undefined) ??
     resolveSubagentConfiguredModelSelection({
       cfg: params.cfg,
       agentId: params.agentId,

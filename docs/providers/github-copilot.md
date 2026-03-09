@@ -63,6 +63,32 @@ openclaw models set github-copilot/gpt-4o
 }
 ```
 
+## Available models
+
+OpenClaw registers the following models for the `github-copilot` provider by
+default. Availability depends on your Copilot plan; if a model is rejected,
+try another one from the list or remove it from your config.
+
+| Model ID            | Family           | Notes                                                     |
+| ------------------- | ---------------- | --------------------------------------------------------- |
+| `claude-opus-4.5`   | Anthropic Claude | Most capable Claude; best for complex, long-horizon tasks |
+| `claude-sonnet-4.6` | Anthropic Claude | Balanced capability and speed                             |
+| `claude-sonnet-4.5` | Anthropic Claude | Balanced capability and speed                             |
+| `claude-haiku-4.5`  | Anthropic Claude | Fast and lightweight                                      |
+| `gpt-4o`            | OpenAI GPT       | General-purpose multimodal                                |
+| `gpt-4.1`           | OpenAI GPT       | Latest GPT-4.1                                            |
+| `gpt-4.1-mini`      | OpenAI GPT       | Efficient GPT-4.1 variant                                 |
+| `gpt-4.1-nano`      | OpenAI GPT       | Smallest GPT-4.1 variant                                  |
+| `o4-mini`           | OpenAI reasoning | Fast reasoning model                                      |
+| `o3`                | OpenAI reasoning | Advanced reasoning model                                  |
+| `o3-mini`           | OpenAI reasoning | Compact reasoning model                                   |
+| `o1`                | OpenAI reasoning | Original reasoning model                                  |
+| `o1-mini`           | OpenAI reasoning | Compact o1 variant                                        |
+
+Reasoning models (`o1`, `o3`, `o4` families) are automatically recognized and
+have the `reasoning` flag enabled, which unlocks extended thinking features in
+the agent runtime.
+
 ## Notes
 
 - Requires an interactive TTY; run it directly in a terminal.

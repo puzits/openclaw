@@ -795,6 +795,14 @@ export const AgentEntrySchema = z
               .strict(),
           ])
           .optional(),
+        models: z
+          .object({
+            simple: AgentModelSchema.optional(),
+            medium: AgentModelSchema.optional(),
+            complex: AgentModelSchema.optional(),
+          })
+          .strict()
+          .optional(),
         thinking: z.string().optional(),
       })
       .strict()

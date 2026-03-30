@@ -269,6 +269,34 @@ describe("context-pruning", () => {
     expect(toolText(findToolResult(next, "t3"))).toContain("z".repeat(20_000));
   });
 
+  it("accounts for CJK Extension B text when deciding whether to prune", () => {
+    const extensionBText = "𠀀".repeat(50);
+    const messages: AgentMessage[] = [
+      makeUser(extensionBText),
+      makeToolResult({
+        toolCallId: "t1",
+        toolName: "exec",
+        text: "keep me",
+      }),
+    ];
+
+    const next = pruneContextMessages({
+      messages,
+      settings: makeAggressiveSettings({
+        keepLastAssistants: 0,
+        softTrimRatio: 1,
+        hardClearRatio: 1,
+        minPrunableToolChars: 0,
+        hardClear: { enabled: true, placeholder: "[cleared]" },
+      }),
+      ctx: CONTEXT_WINDOW_1000,
+      contextWindowTokensOverride: 40,
+      isToolPrunable: () => true,
+    });
+
+    expect(toolText(findToolResult(next, "t1"))).toBe("[cleared]");
+  });
+
   it("uses contextWindow override when ctx.model is missing", () => {
     const messages = makeSimpleToolPruningMessages(true);
 
@@ -358,21 +386,26 @@ describe("context-pruning", () => {
     expect(toolText(findToolResult(next, "t2"))).toContain("y".repeat(20_000));
   });
 
-  it("skips tool results that contain images (no soft trim, no hard clear)", () => {
+  it("replaces image blocks in tool results during soft trim", () => {
     const messages: AgentMessage[] = [
       makeUser("u1"),
       makeImageToolResult({
         toolCallId: "t1",
         toolName: "exec",
-        text: "x".repeat(20_000),
+        text: "visible tool text",
       }),
     ];
 
-    const next = pruneWithAggressiveDefaults(messages);
+    const next = pruneWithAggressiveDefaults(messages, {
+      hardClearRatio: 10.0,
+      hardClear: { enabled: false, placeholder: "[cleared]" },
+      softTrim: { maxChars: 200, headChars: 100, tailChars: 100 },
+    });
 
     const tool = findToolResult(next, "t1");
-    expect(tool.content.some((b) => b.type === "image")).toBe(true);
-    expect(toolText(tool)).toContain("x".repeat(20_000));
+    expect(tool.content.some((b) => b.type === "image")).toBe(false);
+    expect(toolText(tool)).toContain("[image removed during context pruning]");
+    expect(toolText(tool)).toContain("visible tool text");
   });
 
   it("soft-trims across block boundaries", () => {

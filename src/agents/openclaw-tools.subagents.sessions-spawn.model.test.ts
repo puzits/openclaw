@@ -131,12 +131,11 @@ describe("openclaw-tools: subagents (sessions_spawn model + thinking)", () => {
     expect(patchIndex).toBeGreaterThan(-1);
     expect(agentIndex).toBeGreaterThan(-1);
     expect(patchIndex).toBeLessThan(agentIndex);
-    const patchCall = calls.find(
-      (call) => call.method === "sessions.patch" && (call.params as { model?: string })?.model,
-    );
-    expect(patchCall?.params).toMatchObject({
+    const patchCalls = calls.filter((call) => call.method === "sessions.patch");
+    expect(patchCalls[0]?.params).toMatchObject({
       key: expect.stringContaining("subagent:"),
       model: "claude-haiku-4-5",
+      spawnDepth: 1,
     });
   });
 
@@ -201,11 +200,11 @@ describe("openclaw-tools: subagents (sessions_spawn model + thinking)", () => {
     await expectSpawnUsesConfiguredModel({
       config: {
         session: { mainKey: "main", scope: "per-sender" },
-        agents: { defaults: { subagents: { model: "minimax/MiniMax-M2.5" } } },
+        agents: { defaults: { subagents: { model: "minimax/MiniMax-M2.7" } } },
       },
       runId: "run-default-model",
       callId: "call-default-model",
-      expectedModel: "minimax/MiniMax-M2.5",
+      expectedModel: "minimax/MiniMax-M2.7",
     });
   });
 
@@ -222,7 +221,7 @@ describe("openclaw-tools: subagents (sessions_spawn model + thinking)", () => {
       config: {
         session: { mainKey: "main", scope: "per-sender" },
         agents: {
-          defaults: { subagents: { model: "minimax/MiniMax-M2.5" } },
+          defaults: { subagents: { model: "minimax/MiniMax-M2.7" } },
           list: [{ id: "research", subagents: { model: "opencode/claude" } }],
         },
       },
@@ -237,7 +236,7 @@ describe("openclaw-tools: subagents (sessions_spawn model + thinking)", () => {
       config: {
         session: { mainKey: "main", scope: "per-sender" },
         agents: {
-          defaults: { model: { primary: "minimax/MiniMax-M2.5" } },
+          defaults: { model: { primary: "minimax/MiniMax-M2.7" } },
           list: [{ id: "research", model: { primary: "opencode/claude" } }],
         },
       },
